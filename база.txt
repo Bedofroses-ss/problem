@@ -1,0 +1,76 @@
+ 1.
+DROP DATABASE IF EXISTS electronics_market;
+CREATE DATABASE electronics_market CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE electronics_market;
+
+-- 2. Таблица Клиенты (Customers)
+CREATE TABLE Customers (
+    C_ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    C_FNAME VARCHAR(100) NOT NULL,
+    C_NAME VARCHAR(100) NOT NULL,
+    C_MNAME VARCHAR(100) NULL,
+    C_PHONE VARCHAR(30) NOT NULL UNIQUE, -- Уникальный телефон
+    C_EMAIL VARCHAR(254) NULL,
+    CONSTRAINT chk_email CHECK (C_EMAIL IS NULL OR C_EMAIL LIKE '%_@_%._%') -- Проверка формата email
+);
+
+-- 3. Таблица Категории (Product_Categories)
+CREATE TABLE Product_Categories (
+    CAT_ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    CAT_NAME VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- 4. Таблица Товары (Products)
+CREATE TABLE Products (
+    P_ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    P_NAME VARCHAR(200) NOT NULL,
+    P_MANUFACTURER VARCHAR(100) NOT NULL,
+    P_PRICE DECIMAL(10,2) NOT NULL,
+    P_STOCK INT UNSIGNED NOT NULL DEFAULT 0,
+    CAT_ID INT UNSIGNED NOT NULL,
+    CONSTRAINT chk_price CHECK (P_PRICE > 0), -- Цена не может быть отрицательной
+    CONSTRAINT fk_product_category FOREIGN KEY (CAT_ID) REFERENCES Product_Categories(CAT_ID)
+);
+
+-- 5. Таблица Заказы (Orders)
+CREATE TABLE Orders (
+    O_ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    C_ID INT UNSIGNED NOT NULL,
+    O_DATE DATE NOT NULL,
+    O_STATUS VARCHAR(20) NOT NULL DEFAULT 'Оформлен',
+    O_ADDRESS VARCHAR(500) NULL,
+    CONSTRAINT chk_status CHECK (O_STATUS IN ('Оформлен', 'Оплачен', 'Доставлен', 'Отменён')), -- Защита от левых статусов
+    CONSTRAINT fk_order_customer FOREIGN KEY (C_ID) REFERENCES Customers(C_ID)
+);
+
+-- 6. Таблица Услуги (Services)
+CREATE TABLE Services (
+    S_ID INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    S_NAME VARCHAR(200) NOT NULL UNIQUE,
+    S_PRICE DECIMAL(10,2) NOT NULL,
+    CONSTRAINT chk_service_price CHECK (S_PRICE > 0)
+);
+
+-- 7. Таблица Заказ_Товары (Order_Items) - связь M:N
+CREATE TABLE Order_Items (
+    O_ID INT UNSIGNED NOT NULL,
+    P_ID INT UNSIGNED NOT NULL,
+    OI_QUANTITY INT UNSIGNED NOT NULL,
+    OI_PRICE DECIMAL(10,2) NOT NULL,
+    PRIMARY KEY (O_ID, P_ID), -- Составной ключ (нельзя добавить один товар дважды в один заказ)
+    CONSTRAINT chk_qty CHECK (OI_QUANTITY > 0),
+    CONSTRAINT fk_item_order FOREIGN KEY (O_ID) REFERENCES Orders(O_ID),
+    CONSTRAINT fk_item_product FOREIGN KEY (P_ID) REFERENCES Products(P_ID)
+);
+
+-- 8. Таблица Заказ_Услуги (Order_Services) - связь M:N
+CREATE TABLE Order_Services (
+    O_ID INT UNSIGNED NOT NULL,
+    S_ID INT UNSIGNED NOT NULL,
+    OS_DATE DATE NOT NULL,
+    OS_COUNT INT UNSIGNED NOT NULL DEFAULT 1,
+    PRIMARY KEY (O_ID, S_ID), -- Составной ключ
+    CONSTRAINT chk_count CHECK (OS_COUNT > 0),
+    CONSTRAINT fk_srv_order FOREIGN KEY (O_ID) REFERENCES Orders(O_ID),
+    CONSTRAINT fk_srv_service FOREIGN KEY (S_ID) REFERENCES Services(S_ID)
+);
